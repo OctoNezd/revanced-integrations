@@ -143,23 +143,19 @@ public class Test {
 
         if (itag == null) return s;
 
-        // find nearest key to itag
-        var availableTags = formats.keySet();
-        Integer nearest;
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-            nearest = availableTags.stream().min(Comparator.comparingInt(a -> Math.abs(Integer.parseInt(itag) - a))).orElse(null);
-        } else {
-            nearest = null;
-        }
-        Logger.printInfo(() -> "Hooked count: " + formats.size());
-        Logger.printInfo(() -> "Hooked nearest " + nearest);
-
-        String m = formats.get(nearest);
+        String m = formats.get(Integer.parseInt(itag));
         if (m == null) {
             Logger.printInfo(() -> "Hooked format null");
-            return s;
+            return null;
         }
         Logger.printInfo(() -> "Hooked format " + m);
+        StackTraceElement stackTraceElement = new Throwable().getStackTrace()[1];
+        StackTraceElement stackTraceElement2 = new Throwable().getStackTrace()[2];
+        StackTraceElement stackTraceElement3 = new Throwable().getStackTrace()[3];
+        Logger.printInfo(() -> "Hooked " + stackTraceElement3);
+        Logger.printInfo(() -> "Hooked " + stackTraceElement2);
+        Logger.printInfo(() -> "Hooked " + stackTraceElement);
+
         return m;
     }
 }
