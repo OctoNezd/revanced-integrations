@@ -74,11 +74,16 @@ public class Test {
         return null;
     }
 
-    public static String hook(String s) {
+    public static void hook(Object formatsListObject) {
+        StackTraceElement stackTraceElement = new Throwable().getStackTrace()[1];
+        StackTraceElement stackTraceElement2 = new Throwable().getStackTrace()[2];
+        StackTraceElement stackTraceElement3 = new Throwable().getStackTrace()[3];
+        Logger.printInfo(() -> "Call " + stackTraceElement3);
+        Logger.printInfo(() -> "Call " + stackTraceElement2);
+        Logger.printInfo(() -> "Call " + stackTraceElement);
 
-        if (!s.contains("googlevideo")) return s;
         if (formats == null) {
-            Logger.printInfo(() -> "Hooked start");
+            Logger.printInfo(() -> "Fetching urls");
             try {
                 formats = Utils.submitOnBackgroundThread(() -> {
                     var f = new HashMap<Integer, String>();
@@ -86,12 +91,10 @@ public class Test {
                         @Override
                         public Response execute(Request request) throws IOException {
                             var c = makeRequest(request);
-                            Logger.printInfo(() -> "Hooked got response");
                             var body = false;
-                            try{
+                            try {
                                 body = c.getInputStream() != null;
                             } catch (Exception e) {
-                                Logger.printInfo(() -> "Hooked Error making request: " + e.getMessage(), e);
                             }
                             Response r = null;
                             try {
@@ -103,7 +106,6 @@ public class Test {
                                         c.getURL().toString()
                                 );
                             } catch (IOException e) {
-                                Logger.printInfo(() -> "Hooked Error making request: " + e.getMessage(), e);
                                 throw e;
                             }
                             c.disconnect();
@@ -112,50 +114,61 @@ public class Test {
                     });
                     var extractor = new YoutubeService(1).getStreamExtractor(YoutubeStreamLinkHandlerFactory.getInstance().fromId("piKJAUwCYTo"));
                     extractor.fetchPage();
-                    Logger.printInfo(() -> "Hooked got extractor");
                     for (AudioStream audioStream : extractor.getAudioStreams()) {
                         f.put(audioStream.getItag(), audioStream.getContent());
                     }
-
-                    Logger.printInfo(() -> "Hooked got audio");
 
                     for (VideoStream videoOnlyStream : extractor.getVideoOnlyStreams()) {
                         f.put(videoOnlyStream.getItag(), videoOnlyStream.getContent());
                     }
 
-                    Logger.printInfo(() -> "Hooked got video only");
-
                     for (VideoStream videoStream : extractor.getVideoStreams()) {
                         f.put(videoStream.getItag(), videoStream.getContent());
                     }
-                    Logger.printInfo(() -> "Hooked got format");
 
                     return f;
                 }).get();
 
             } catch (Exception i) {
-                Logger.printInfo(() -> "Hooked Error making request: " + i.getMessage(), i);
             }
             //formats = StoryboardRendererRequester.getFormats("piKJAUwCYTo");
         }
-        var itag = Uri.parse(s).getQueryParameter("itag");
-        Logger.printInfo(() -> "Hooked itag: " + itag);
 
-        if (itag == null) return s;
+        try {
+            if (formatsListObject instanceof List) {
+                var formatsList = (List) formatsListObject;
+                for (Object formatObject : formatsList) {
+                    var field = formatObject.getClass().getDeclaredField("f");
+                    var url = (String) field.get(formatObject);
+                    if (!url.contains("googlevideo")) continue;
 
-        String m = formats.get(Integer.parseInt(itag));
-        if (m == null) {
-            Logger.printInfo(() -> "Hooked format null");
-            return null;
+                    var itag = Uri.parse(url).getQueryParameter("itag");
+                    if (itag == null) {
+                        Logger.printInfo(() -> "URL does not contain itag: " + url);
+                        continue;
+                    }
+
+                    String replacement = formats.get(Integer.parseInt(itag));
+                    if (replacement == null) {
+                        Logger.printInfo(() -> "Falling back to itag 133");
+                        replacement = formats.get(133);
+                    }
+
+                    if (replacement == null) {
+                        Logger.printInfo(() -> "No replacement found for itag: " + itag);
+                        continue;
+                    }
+
+                    String finalReplacement = replacement;
+                    Logger.printInfo(() -> "Replacing " + url + " with " + finalReplacement);
+
+                    field.set(formatObject, replacement);
+
+                }
+            }
+        } catch (Exception e) {
+            Logger.printInfo(() -> "Hooked Error: " + e.getMessage(), e);
         }
-        Logger.printInfo(() -> "Hooked format " + m);
-        StackTraceElement stackTraceElement = new Throwable().getStackTrace()[1];
-        StackTraceElement stackTraceElement2 = new Throwable().getStackTrace()[2];
-        StackTraceElement stackTraceElement3 = new Throwable().getStackTrace()[3];
-        Logger.printInfo(() -> "Hooked " + stackTraceElement3);
-        Logger.printInfo(() -> "Hooked " + stackTraceElement2);
-        Logger.printInfo(() -> "Hooked " + stackTraceElement);
 
-        return m;
     }
 }
